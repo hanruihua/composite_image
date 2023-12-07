@@ -27,8 +27,7 @@ class CompositeImage:
         self.end_t = end_t
         self.mode = mode
 
-    def max_variation_update(self, image, cnt=0):
-        
+    def max_variation_update(self, image):
         delta_img = image - self.ave_img
         image_norm = np.linalg.norm(image, axis=2)
         delta_norm = image_norm - self.ave_img_norm
@@ -37,39 +36,24 @@ class CompositeImage:
         diff_mask = abs_delta_norm <= self.abs_diff_norm
         delta_mask = np.stack((delta_mask.T, delta_mask.T, delta_mask.T)).T.astype(np.float32)
         diff_mask = np.stack((diff_mask.T, diff_mask.T, diff_mask.T)).T.astype(np.float32)
-
-        if (cnt == self.img_num ):
-            
-            cur_min_image = self.diff_img + self.ave_img     
-            cur_min_image_norm = np.linalg.norm(cur_min_image,axis=2)
-            delta_mask = abs_delta_norm > self.abs_diff_norm
-            diff_mask = abs_delta_norm <= self.abs_diff_norm
-
-            delta_mask = np.stack((delta_mask.T, delta_mask.T, delta_mask.T)).T.astype(np.float32)
-            diff_mask = np.stack((diff_mask.T, diff_mask.T, diff_mask.T)).T.astype(np.float32)
-
-            self.diff_img = 0.5 * self.diff_img * diff_mask  + delta_img * delta_mask
-        else:
-            self.diff_img = self.diff_img * diff_mask + delta_img * delta_mask
-
-        self.diff_norm = np.linalg.norm(self.diff_img, axis=2)
+        self.diff_img = self.diff_img * diff_mask + delta_img * delta_mask
+        self. diff_norm = np.linalg.norm(self.diff_img, axis=2)
         self.abs_diff_norm = np.abs(self.diff_norm)
 
-    def min_value_update(self, image, cnt=0):
+    def min_value_update(self, image):
         image_norm = np.linalg.norm(image, axis=2)
-        cur_min_image = self.diff_img + self.ave_img     
+        cur_min_image = self.diff_img + self.ave_img
         cur_min_image_norm = np.linalg.norm(cur_min_image,axis=2)
         delta_mask = cur_min_image_norm > image_norm
         min_mask = cur_min_image_norm <= image_norm
         delta_mask = np.stack((delta_mask.T, delta_mask.T, delta_mask.T)).T.astype(np.float32)
         min_mask = np.stack((min_mask.T, min_mask.T, min_mask.T)).T.astype(np.float32)
         new_min_img = image * delta_mask + min_mask * cur_min_image
-
         self.diff_img = new_min_img - self.ave_img
 
     import numpy as np
 
-    def max_value_update(self, image, cnt=0):
+    def max_value_update(self, image):
         image_norm = np.linalg.norm(image, axis=2)
         cur_min_image = self.diff_img + self.ave_img
         cur_min_image_norm = np.linalg.norm(cur_min_image, axis=2)
@@ -101,7 +85,6 @@ class CompositeImage:
 
         while video.isOpened() and frame_count <= (end_frame - start_frame):
             ret, frame = video.read()
-
             if ret:
                 frame_count += 1
                 if (frame_count % self.skip_frame != 0):
@@ -114,18 +97,9 @@ class CompositeImage:
                     break
             else:
                 break
-        
-           
-
 
         # 释放视频对象
         video.release()
-
-        del imgs[-2]
-        del imgs[-2]
-        del imgs[-2]
-
-
         return imgs
 
     def merge_images(self):
@@ -138,19 +112,13 @@ class CompositeImage:
 
         # 遍历每张图片，将像素值取最大值并合成到空画布上
         sum_image = np.zeros((height, width, 3), dtype=np.float32)
-        self.img_num = len(image_files)
+        img_num = len(image_files)
 
         for image_file in image_files:
-            # cv2.imshow('video', image_file.astype(np.uint8))
-            # cv2.waitKey()
             image = image_file.astype(np.float32)
             sum_image += image
 
-        # cv2.imshow('video', sum_image.astype(np.uint8))
-
-        self.ave_img = sum_image / self.img_num
-
-        # cv2.imshow('video', sum_image.astype(np.uint8))
+        self.ave_img = sum_image / img_num
 
         self.ave_img_norm = np.linalg.norm(self.ave_img, axis=2)
         self.diff_norm = np.zeros((height, width), dtype=np.float32)
@@ -161,14 +129,14 @@ class CompositeImage:
         cnt = 0
         for image_file in image_files:
             cnt = cnt + 1
-            print("Processing ", cnt, " / ", self.img_num)
+            print("Processing ", cnt, " / ", img_num)
             image = image_file.astype(np.float32)
             if(self.mode == CompositeMode.MAX_VARIATION):
-                self.max_variation_update(image, cnt)
+                self.max_variation_update(image)
             elif(self.mode == CompositeMode.MIN_VALUE):
-                self.min_value_update(image, cnt)
+                self.min_value_update(image)
             elif(self.mode == CompositeMode.MAX_VALUE):
-                self.max_value_update(image, cnt)
+                self.max_value_update(image)
 
         merged_image = self.ave_img + self.diff_img
         merged_image = merged_image.astype(np.uint8)
@@ -179,11 +147,11 @@ parser = argparse.ArgumentParser(
                     prog='CompositeImage',
                     description='Convert video to composite image.',
                     epilog='-')
-parser.add_argument('--video_path', type=str, default='./leg2.mp4', help='path of input video file.')
+parser.add_argument('--video_path', type=str, help='path of input video file.')
 parser.add_argument('--mode', default='VAR', choices=['VAR', 'MAX', 'MIN'], help='mode of composite image.')
 parser.add_argument('--start_t', default=0, type=float, help='start time of composite image.')
-parser.add_argument('--end_t',default=26, type=float, help='end time of composite image.')
-parser.add_argument('--skip_frame', default=50, type=int, help='skip frame when extract frames.')
+parser.add_argument('--end_t',default=999999, type=float, help='end time of composite image.')
+parser.add_argument('--skip_frame', default=1, type=int, help='skip frame when extract frames.')
 
 args = parser.parse_args()
 
