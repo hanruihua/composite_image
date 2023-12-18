@@ -37,7 +37,7 @@ class CompositeImage:
         delta_mask = np.stack((delta_mask.T, delta_mask.T, delta_mask.T)).T.astype(np.float32)
         diff_mask = np.stack((diff_mask.T, diff_mask.T, diff_mask.T)).T.astype(np.float32)
         self.diff_img = self.diff_img * diff_mask + delta_img * delta_mask
-        self. diff_norm = np.linalg.norm(self.diff_img, axis=2)
+        self.diff_norm = np.linalg.norm(self.diff_img, axis=2)
         self.abs_diff_norm = np.abs(self.diff_norm)
 
     def min_value_update(self, image):

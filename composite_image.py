@@ -20,15 +20,16 @@ class CompositeMode(Enum):
 
 class CompositeImage:
 
-    def __init__(self, mode, video_path, start_t = 0, end_t = 999, skip_frame = 1):
+    def __init__(self, mode, video_path, start_t = 0, end_t = 999, skip_frame = 1, transparent=0.5):
         self.video_path = video_path
         self.skip_frame = skip_frame
         self.start_t = start_t
         self.end_t = end_t
         self.mode = mode
+        self.transparent = transparent
 
     def max_variation_update(self, image, cnt=0):
-        
+
         delta_img = image - self.ave_img
         image_norm = np.linalg.norm(image, axis=2)
         delta_norm = image_norm - self.ave_img_norm
@@ -39,16 +40,7 @@ class CompositeImage:
         diff_mask = np.stack((diff_mask.T, diff_mask.T, diff_mask.T)).T.astype(np.float32)
 
         if (cnt == self.img_num ):
-            
-            cur_min_image = self.diff_img + self.ave_img     
-            cur_min_image_norm = np.linalg.norm(cur_min_image,axis=2)
-            delta_mask = abs_delta_norm > self.abs_diff_norm
-            diff_mask = abs_delta_norm <= self.abs_diff_norm
-
-            delta_mask = np.stack((delta_mask.T, delta_mask.T, delta_mask.T)).T.astype(np.float32)
-            diff_mask = np.stack((diff_mask.T, diff_mask.T, diff_mask.T)).T.astype(np.float32)
-
-            self.diff_img = 0.5 * self.diff_img * diff_mask  + delta_img * delta_mask
+            self.diff_img = self.transparent * self.diff_img * diff_mask  + delta_img * delta_mask
         else:
             self.diff_img = self.diff_img * diff_mask + delta_img * delta_mask
 
@@ -63,7 +55,11 @@ class CompositeImage:
         min_mask = cur_min_image_norm <= image_norm
         delta_mask = np.stack((delta_mask.T, delta_mask.T, delta_mask.T)).T.astype(np.float32)
         min_mask = np.stack((min_mask.T, min_mask.T, min_mask.T)).T.astype(np.float32)
-        new_min_img = image * delta_mask + min_mask * cur_min_image
+
+        if (cnt == self.img_num ):
+            new_min_img = image * delta_mask + self.transparent * min_mask * cur_min_image
+        else:
+            new_min_img = image * delta_mask + min_mask * cur_min_image
 
         self.diff_img = new_min_img - self.ave_img
 
@@ -175,12 +171,13 @@ parser = argparse.ArgumentParser(
                     prog='CompositeImage',
                     description='Convert video to composite image.',
                     epilog='-')
-parser.add_argument('--video_path', type=str, default='./03_limo_327.mp4', help='path of input video file.')
-parser.add_argument('--mode', default='VAR', choices=['VAR', 'MAX', 'MIN'], help='mode of composite image.')
-parser.add_argument('--start_t', default=5, type=float, help='start time of composite image.')
-parser.add_argument('--end_t',default=10, type=float, help='end time of composite image.')
-parser.add_argument('--skip_frame', default=25, type=int, help='skip frame when extract frames.')
-parser.add_argument('--output_name', default=25, type=int, help='skip frame when extract frames.')
+parser.add_argument('-p', '--video_path', type=str, default='./03_limo_327.mp4', help='path of input video file.')
+parser.add_argument('-m', '--mode', default='VAR', choices=['VAR', 'MAX', 'MIN'], help='mode of composite image.')
+parser.add_argument('-s', '--start_t', default=5, type=float, help='start time of composite image.')
+parser.add_argument('-e', '--end_t', default=10, type=float, help='end time of composite image.')
+parser.add_argument('-k', '--skip_frame', default=25, type=int, help='skip frame when extract frames.')
+parser.add_argument('-o', '--output_name', default='composite_image.png', type=str, help='the output file name.')
+parser.add_argument('-t', '--transparent', default=0.5, type=float, help='the transparent of the image.')
 
 args = parser.parse_args()
 
@@ -190,12 +187,16 @@ mode = args.mode
 start_t = args.start_t
 end_t = args.end_t
 skip_frame = args.skip_frame
+output_name = args.output_name
+transparent = args.transparent
 
 print(" -- Load Param: video path", path)
 print(" -- Load Param: mode", mode)
 print(" -- Load Param: start_t", start_t)
 print(" -- Load Param: end_t", end_t)
 print(" -- Load Param: skip_frame", skip_frame)
+print(" -- Load Param: output_name", output_name)
+print(" -- Load Param: transparent", transparent)
 
 if(mode == 'MAX'):
     mode = CompositeMode.MAX_VALUE
@@ -204,7 +205,6 @@ elif(mode == 'MIN'):
 elif(mode == 'VAR'):
     mode = CompositeMode.MAX_VARIATION
 
-
-merger = CompositeImage(mode, path,start_t,end_t, skip_frame)
+merger = CompositeImage(mode, path,start_t,end_t, skip_frame, transparent)
 merged_image = merger.merge_images()
-cv2.imwrite('composite_image.png', merged_image)
+cv2.imwrite(output_name, merged_image)
