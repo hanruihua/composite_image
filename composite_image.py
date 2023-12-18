@@ -115,17 +115,13 @@ class CompositeImage:
             else:
                 break
         
-           
-
-
+        
         # 释放视频对象
         video.release()
 
-        del imgs[-2]
-        del imgs[-2]
-        del imgs[-2]
-
-
+        # del imgs[-2]
+        # del imgs[-2]
+        # del imgs[-2]
         return imgs
 
     def merge_images(self):
@@ -179,11 +175,12 @@ parser = argparse.ArgumentParser(
                     prog='CompositeImage',
                     description='Convert video to composite image.',
                     epilog='-')
-parser.add_argument('--video_path', type=str, default='./leg2.mp4', help='path of input video file.')
+parser.add_argument('--video_path', type=str, default='./03_limo_327.mp4', help='path of input video file.')
 parser.add_argument('--mode', default='VAR', choices=['VAR', 'MAX', 'MIN'], help='mode of composite image.')
-parser.add_argument('--start_t', default=0, type=float, help='start time of composite image.')
-parser.add_argument('--end_t',default=26, type=float, help='end time of composite image.')
-parser.add_argument('--skip_frame', default=50, type=int, help='skip frame when extract frames.')
+parser.add_argument('--start_t', default=5, type=float, help='start time of composite image.')
+parser.add_argument('--end_t',default=10, type=float, help='end time of composite image.')
+parser.add_argument('--skip_frame', default=25, type=int, help='skip frame when extract frames.')
+parser.add_argument('--output_name', default=25, type=int, help='skip frame when extract frames.')
 
 args = parser.parse_args()
 
@@ -208,7 +205,6 @@ elif(mode == 'VAR'):
     mode = CompositeMode.MAX_VARIATION
 
 
-
 merger = CompositeImage(mode, path,start_t,end_t, skip_frame)
 merged_image = merger.merge_images()
-cv2.imwrite('composite_image.jpg', merged_image)
+cv2.imwrite('composite_image.png', merged_image)
