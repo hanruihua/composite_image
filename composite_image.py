@@ -36,6 +36,10 @@ class CompositeImage:
         abs_delta_norm = np.abs(delta_norm)
         delta_mask = abs_delta_norm > self.abs_diff_norm
         diff_mask = abs_delta_norm <= self.abs_diff_norm
+
+        # diff_mask = abs_delta_norm <= self.abs_diff_norm - 130
+
+
         delta_mask = np.stack((delta_mask.T, delta_mask.T, delta_mask.T)).T.astype(np.float32)
         diff_mask = np.stack((diff_mask.T, diff_mask.T, diff_mask.T)).T.astype(np.float32)
 
